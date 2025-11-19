@@ -1,12 +1,8 @@
 import express from "express";
 import puppeteer from "puppeteer";
-import puppeteer from "puppeteer-core";
-
-// ...
 
 const browser = await puppeteer.launch({
   headless: true,
-  executablePath: "/usr/bin/chromium-browser", // Render system Chrome
   args: ["--no-sandbox", "--disable-setuid-sandbox"]
 });
 
