@@ -1,15 +1,10 @@
-import express from "express";
-import puppeteer from "puppeteer";
-
-const browser = await puppeteer.launch({
-  headless: true,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"]
-});
+const express = require("express");
+const puppeteer = require("puppeteer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// API Route: /result?board=dhaka&roll=123456&reg=789101&year=2023
+// Route: /result?board=dhaka&roll=123456&reg=789101&year=2023
 app.get("/result", async (req, res) => {
   try {
     const board = req.query.board?.toLowerCase();
@@ -17,7 +12,6 @@ app.get("/result", async (req, res) => {
     const reg = req.query.reg;
     const year = req.query.year;
 
-    // Validate required params
     if (!board || !roll || !reg || !year) {
       return res.status(400).json({
         status: "error",
@@ -25,8 +19,12 @@ app.get("/result", async (req, res) => {
       });
     }
 
-    // Valid board list
-    const validBoards = ["barisal", "chittagong", "comilla", "dhaka", "dinajpur", "jessore", "mymensingh", "rajshahi", "sylhet", "madrasah", "tec", "dibs"];
+    const validBoards = [
+      "barisal","chittagong","comilla","dhaka","dinajpur",
+      "jessore","mymensingh","rajshahi","sylhet",
+      "madrasah","tec","dibs"
+    ];
+
     if (!validBoards.includes(board)) {
       return res.status(400).json({ status: "error", message: "Invalid board" });
     }
@@ -34,27 +32,23 @@ app.get("/result", async (req, res) => {
     // Puppeteer launch
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox","--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
     await page.goto("https://www.educationboardresults.gov.bd/", { waitUntil: "networkidle2" });
 
-    // Fill form
     await page.select("select[name='exam']", "ssc");
     await page.select("select[name='year']", year);
     await page.select("select[name='board']", board);
-
     await page.type("input[name='roll']", roll);
     await page.type("input[name='reg']", reg);
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(1500);
 
-    // Submit form
     await page.click("input[type='submit']");
     await page.waitForSelector("table.black12", { timeout: 15000 });
 
-    // Scrape data
     const data = await page.evaluate(() => {
       const getText = (label) => {
         const td = document.evaluate(
@@ -67,7 +61,6 @@ app.get("/result", async (req, res) => {
         return td ? td.innerText.trim() : "";
       };
 
-      // Subject Table
       const tables = document.querySelectorAll("table.black12");
       let subjects = [];
       if (tables.length >= 2) {
@@ -103,17 +96,10 @@ app.get("/result", async (req, res) => {
       data
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      status: "error",
-      message: "Could not fetch result",
-      error: error.toString()
-    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status:"error", message:"Could not fetch result", error: err.toString() });
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
